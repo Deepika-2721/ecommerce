@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Order History — Online Shopping</title>
+    <!-- Bootstrap 5 CSS & Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-custom sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">
+                <i class="bi bi-bag-heart-fill text-primary"></i> OnlineShopping
+            </a>
+            <div class="collapse navbar-collapse" id="mainNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link" href="index.html">Shop Catalog</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="orders.html">My Orders</a></li>
+                </ul>
+                <div class="d-flex align-items-center">
+                    <a href="cart.html" class="btn btn-outline-light me-3 position-relative">
+                        <i class="bi bi-cart3"></i> Cart
+                    </a>
+                    <div id="navAuthContainer"></div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-5 main-content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="fw-bold mb-0"><i class="bi bi-clock-history"></i> Order History</h3>
+            <a href="index.html" class="btn btn-outline-primary btn-sm"><i class="bi bi-plus-circle"></i> Shop More</a>
+        </div>
+
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-custom mb-0">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Date</th>
+                                <th>Items Ordered</th>
+                                <th>Payment Mode</th>
+                                <th>Total</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="orderHistoryBody">
+                            <tr>
+                                <td colspan="6" class="text-center py-4">
+                                    <div class="spinner-border text-primary"></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/firebase-api.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script>
+        $(document).ready(function() {
+            const userId = localStorage.getItem('userId');
+            if (!userId) {
+                $('#orderHistoryBody').html('<tr><td colspan="6" class="text-center py-5">Please <a href="login.html">Sign In</a> to view your order history.</td></tr>');
+                return;
+            }
+
+            FirestoreAPI.getDocuments('orders').then(function(res) {
+                const allOrders = res.items || [];
+                const userOrders = allOrders.filter(o => o.customerId === userId);
+                const tbody = $('#orderHistoryBody').empty();
+
+                if (userOrders.length === 0) {
+                    tbody.html('<tr><td colspan="6" class="text-center py-5 text-muted">You have not placed any orders yet. <a href="index.html">Start Shopping</a></td></tr>');
+                    return;
+                }
+
+                userOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+                userOrders.forEach(o => {
+                    const itemsSummary = (o.items || []).map(i => `${i.title} (x${i.selectedQty || i.qty})`).join(', ');
+                    tbody.append(`
+                        <tr>
+                            <td><strong>${o.orderId}</strong></td>
+                            <td>${new Date(o.createdAt).toLocaleDateString()}</td>
+                            <td class="text-truncate" style="max-width: 250px;" title="${itemsSummary}">${itemsSummary}</td>
+                            <td><span class="badge ${o.paymentType === 'cash' ? 'bg-success' : 'bg-primary'}">${o.paymentType.toUpperCase()}</span></td>
+                            <td><strong>$${parseFloat(o.totalAmount || 0).toFixed(2)}</strong></td>
+                            <td><span class="badge bg-success">${o.status || 'Completed'}</span></td>
+                        </tr>
+                    `);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
