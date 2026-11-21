@@ -1,3 +1,4 @@
+
 name: CI/CD Pipeline
 
 on:
@@ -6,41 +7,81 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
 jobs:
   validate:
     name: Lint & Validate Codebase
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
 
       - name: Verify Project Structure
         run: |
-          test -f index.html && echo "index.html present"
-          test -f login.html && echo "login.html present"
-          test -f cart.html && echo "cart.html present"
-          test -f orders.html && echo "orders.html present"
-          test -f admin/index.html && echo "admin/index.html present"
-          test -f admin/inventory.html && echo "admin/inventory.html present"
-          test -f admin/customers.html && echo "admin/customers.html present"
-          test -f admin/reports.html && echo "admin/reports.html present"
-          test -f assets/js/firebase-api.js && echo "firebase-api.js present"
+          set -e
+
+          test -f index.html
+          echo "index.html present"
+
+          test -f login.html
+          echo "login.html present"
+
+          test -f cart.html
+          echo "cart.html present"
+
+          test -f orders.html
+          echo "orders.html present"
+
+          test -f admin/index.html
+          echo "admin/index.html present"
+
+          test -f admin/inventory.html
+          echo "admin/inventory.html present"
+
+          test -f admin/customers.html
+          echo "admin/customers.html present"
+
+          test -f admin/reports.html
+          echo "admin/reports.html present"
+
+          test -f assets/js/firebase-api.js
+          echo "firebase-api.js present"
+
           echo "All core application files verified successfully!"
 
   deploy:
-    name: Deploy to Static Hosting
+    name: Deploy to GitHub Pages
     needs: validate
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
     runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Deployment Step (Firebase Hosting / GitHub Pages)
-        run: |
-          echo "Deploying online shopping application to production hosting..."
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Website Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
